@@ -117,123 +117,161 @@ class ExamGenerator:
             f.write(text_block)
         return filename
 
+    def _normalize_math_symbols(self, text: str) -> str:
+        """Заменяет математические Unicode на обычные символы."""
+        replacements = {
+            # ═══ Blackboard Bold (множества) ═══
+            '𝔽': 'F', 'ℤ': 'Z', 'ℕ': 'N', 'ℚ': 'Q', 'ℝ': 'R', 'ℂ': 'C', '𝔾': 'G',
+            
+            # ═══ Mathematical Italic - ГРЕЧЕСКИЕ ═══
+            '𝜉': 'ξ', '𝜂': 'η', '𝜁': 'ζ', '𝜃': 'θ', '𝛼': 'α', '𝛽': 'β', 
+            '𝛾': 'γ', '𝛿': 'δ', '𝜀': 'ε', '𝜆': 'λ', '𝜇': 'μ', '𝜈': 'ν',
+            '𝜋': 'π', '𝜌': 'ρ', '𝜎': 'σ', '𝜏': 'τ', '𝜑': 'φ', '𝜒': 'χ',
+            '𝜓': 'ψ', '𝜔': 'ω',
+            
+            # ═══ Mathematical Italic - ЛАТИНСКИЕ (малые) ═══
+            '𝑎': 'a', '𝑏': 'b', '𝑐': 'c', '𝑑': 'd', '𝑒': 'e', '𝑓': 'f',
+            '𝑔': 'g', '𝒉': 'h', '𝑖': 'i', '𝑗': 'j', '𝑘': 'k', '𝑙': 'l',
+            '𝑚': 'm', '𝑛': 'n', '𝑜': 'o', '𝑝': 'p', '𝑞': 'q', '𝑟': 'r',
+            '𝑠': 's', '𝑡': 't', '𝑢': 'u', '𝑣': 'v', '𝑤': 'w', '𝑥': 'x',
+            '𝑦': 'y', '𝑧': 'z',
+            
+            # ═══ Mathematical Italic - ЛАТИНСКИЕ (большие) ═══
+            '𝐴': 'A', '𝐵': 'B', '𝐶': 'C', '𝐷': 'D', '𝐸': 'E', '𝐹': 'F',
+            '𝐺': 'G', '𝐻': 'H', '𝐼': 'I', '𝐽': 'J', '𝐾': 'K', '𝐿': 'L',
+            '𝑀': 'M', '𝑁': 'N', '𝑂': 'O', '𝑃': 'P', '𝑄': 'Q', '𝑅': 'R',
+            '𝑆': 'S', '𝑇': 'T', '𝑈': 'U', '𝑉': 'V', '𝑊': 'W', '𝑋': 'X',
+            '𝑌': 'Y', '𝑍': 'Z',
+            
+            # ═══ Индексы ═══
+            '₀': '0', '₁': '1', '₂': '2', '₃': '3', '₄': '4',
+            '₅': '5', '₆': '6', '₇': '7', '₈': '8', '₉': '9',
+            
+            # ═══ Операторы ═══
+            '⊕': '⊕', '⊗': '⊗', '×': '×', '∈': '∈', '⊆': '⊆', '∉': '∉', '←': '←', '∑': 'Σ', '∏': 'Π'
+        }
+        for old, new in replacements.items():
+            text = text.replace(old, new)
+        return text
+
     def save_as_pdf(self, tickets: List[str], domain_key: str, num_questions: int) -> Path:
         from reportlab.lib.pagesizes import A4
-        from reportlab.lib import colors
-        from reportlab.pdfgen import canvas
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.units import cm
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak
         from reportlab.pdfbase import pdfmetrics
         from reportlab.pdfbase.ttfonts import TTFont
+        from reportlab.lib.enums import TA_CENTER, TA_LEFT
         from datetime import datetime
-
+        
         filename = OUTPUT_DIR / f"tickets_{domain_key}_{num_questions}q.pdf"
-
-        # Регистрируем шрифты
+        
+        # Регистрируем шрифт
         font_path = Path(__file__).resolve().parent / "fonts" / "DejaVuSans.ttf"
-        bold_font_path = Path(__file__).resolve().parent / "fonts" / "DejaVuSans-Bold.ttf"
-        
-        pdfmetrics.registerFont(TTFont("DejaVuSans", str(font_path)))
-        if bold_font_path.exists():
-            pdfmetrics.registerFont(TTFont("DejaVuSans-Bold", str(bold_font_path)))
+        if font_path.exists():
+            pdfmetrics.registerFont(TTFont('DejaVuSans', str(font_path)))
+            font_name = 'DejaVuSans'
         else:
-            pdfmetrics.registerFont(TTFont("DejaVuSans-Bold", str(font_path)))
-
-        c = canvas.Canvas(str(filename), pagesize=A4)
-        width, height = A4
-
-        # Параметры страницы
-        margin_top = 50
-        margin_left = 40
-        margin_right = 40
-        margin_bottom = 40
-        content_width = width - margin_left - margin_right
-
-        # Цвета
-        header_color = colors.HexColor("#1f4788")
-        accent_color = colors.HexColor("#2196F3")
-        text_color = colors.HexColor("#333333")
-
-        y_position = height - margin_top
-
-        # Заголовок документа
-        c.setFont("DejaVuSans-Bold", 16)
-        c.setFillColor(header_color)
-        title = f"Экзаменационные билеты"
-        c.drawString(margin_left, y_position, title)
-        y_position -= 25
-
-        # Информация о документе
-        c.setFont("DejaVuSans", 10)
-        c.setFillColor(text_color)
-        domain_name = DOMAINS.get(domain_key, domain_key)
-        info_text = f"Дисциплина: {domain_name}  |  Вопросов в билете: {num_questions}  |  Дата: {datetime.now().strftime('%d.%m.%Y')}"
-        c.drawString(margin_left, y_position, info_text)
-        y_position -= 20
-
-        # Горизонтальная линия
-        c.setStrokeColor(accent_color)
-        c.setLineWidth(2)
-        c.line(margin_left, y_position, width - margin_right, y_position)
-        y_position -= 20
-
-        # Флаг для отслеживания первой страницы
-        is_first_page = True
-
-        # Генерируем билеты
-        for ticket_idx, ticket_text in enumerate(tickets, start=1):
-            # Убираем "Экзаменационный билет №XXX по..." из текста
-            clean_ticket_text = self._clean_ticket_text(ticket_text)
-            
-            # Проверяем, нужна ли новая страница
-            text_height = self._calculate_text_height(
-                clean_ticket_text, 
-                content_width - 20, 
-                "DejaVuSans", 
-                10
-            )
-            
-            if y_position - text_height - 30 < margin_bottom and not is_first_page:
-                c.showPage()
-                y_position = height - margin_top
-                # НЕ добавляем больше "Продолжение" или другие надписи
-
-            is_first_page = False
-
-            # Отступ перед заголовком билета
-            y_position -= 10
-
-            # Заголовок билета
-            c.setFont("DejaVuSans-Bold", 12)
-            c.setFillColor(header_color)
-            ticket_title = f"Билет № {ticket_idx}"
-            c.drawString(margin_left, y_position, ticket_title)
-            y_position -= 18
-
-            # Содержимое билета
-            c.setFont("DejaVuSans", 10)
-            c.setFillColor(text_color)
-
-            # Парсим вопросы
-            questions = clean_ticket_text.split("\n\n")
-            for question in questions:
-                if not question.strip():
-                    continue
-
-                # Переносим длинный текст
-                wrapped_text = self._wrap_text(question.strip(), content_width - 20, "DejaVuSans", 10)
-                for line in wrapped_text:
-                    c.drawString(margin_left + 10, y_position, line)
-                    y_position -= 14
-
-                y_position -= 5  # Зазор между вопросами
-
-            y_position -= 15  # Зазор между билетами
-
-        # Нижний колонтитул с упоминанием автора
-        c.setFont("DejaVuSans", 8)
-        c.setFillColor(colors.grey)
-        c.drawString(margin_left, margin_bottom - 10, "Сгенерировано с помощью Questions Generator Bot | Made by Aralary")
+            font_name = 'Helvetica'
+            print(f"⚠️ Шрифт DejaVuSans.ttf не найден в {font_path}")
         
-        c.save()
+        # Создаем документ
+        doc = SimpleDocTemplate(
+            str(filename),
+            pagesize=A4,
+            rightMargin=2*cm,
+            leftMargin=2*cm,
+            topMargin=2*cm,
+            bottomMargin=2*cm
+        )
+        
+        # Стили
+        styles = getSampleStyleSheet()
+        
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontName=font_name,
+            fontSize=16,
+            alignment=TA_CENTER,
+            spaceAfter=12
+        )
+        
+        subtitle_style = ParagraphStyle(
+            'CustomSubtitle',
+            parent=styles['Normal'],
+            fontName=font_name,
+            fontSize=10,
+            alignment=TA_CENTER,
+            spaceAfter=20
+        )
+        
+        ticket_number_style = ParagraphStyle(
+            'TicketNumber',
+            parent=styles['Heading2'],
+            fontName=font_name,
+            fontSize=14,
+            spaceAfter=12
+        )
+        
+        question_style = ParagraphStyle(
+            'Question',
+            parent=styles['Normal'],
+            fontName=font_name,
+            fontSize=11,
+            alignment=TA_LEFT,
+            spaceAfter=16,
+            leading=16
+        )
+        
+        footer_style = ParagraphStyle(
+            'Footer',
+            parent=styles['Normal'],
+            fontName=font_name,
+            fontSize=8,
+            alignment=TA_CENTER
+        )
+        
+        story = []
+        
+        # Заголовок
+        story.append(Paragraph("Экзаменационные билеты", title_style))
+        
+        domain_name = DOMAINS.get(domain_key, domain_key)
+        current_date = datetime.now().strftime("%d.%m.%Y")
+        subtitle = f"Дисциплина: {domain_name}  |  Вопросов в билете: {num_questions}  |  Дата: {current_date}"
+        story.append(Paragraph(subtitle, subtitle_style))
+        story.append(Spacer(1, 0.5*cm))
+        
+        # Билеты с ОБЯЗАТЕЛЬНОЙ нормализацией
+        for ticket_idx, ticket_text in enumerate(tickets, 1):
+            # КРИТИЧЕСКИ ВАЖНО: вызываем нормализацию!
+            normalized_ticket = self._normalize_math_symbols(ticket_text)
+            clean_text = self._clean_ticket_text(normalized_ticket)
+            
+            # Номер билета
+            story.append(Paragraph(f"Билет № {ticket_idx}", ticket_number_style))
+            
+            # Вопросы
+            questions = clean_text.split('\n\n')
+            for question in questions:
+                question = question.strip()
+                if not question:
+                    continue
+                
+                # Экранируем HTML
+                question = question.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+                story.append(Paragraph(question, question_style))
+            
+            if ticket_idx < len(tickets):
+                story.append(PageBreak())
+        
+        # Футер
+        story.append(Spacer(1, 1*cm))
+        story.append(Paragraph("Сгенерировано с помощью Questions Generator Bot | Made by Aralary", footer_style))
+        
+        doc.build(story)
+        print(f"✓ PDF сохранен: {filename}")
         return filename
 
 

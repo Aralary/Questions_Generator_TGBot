@@ -32,7 +32,7 @@ executor = ThreadPoolExecutor(max_workers=1)
 # Предзагрузка модели
 logger.info("Предзагрузка модели (первый адаптер)...")
 try:
-    generator._load_adapter("crypto")
+    generator._load_adapter("cryptography")
     logger.info("✓ Модель загружена и готова к работе")
 except Exception as e:
     logger.error(f"❌ Ошибка при предзагрузке модели: {e}")
@@ -100,7 +100,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Начнем: выберите предметную область ⬇️"
     )
     keyboard = [
-        [InlineKeyboardButton("🔐 Криптография", callback_data="domain:crypto")],
+        [InlineKeyboardButton("🔐 Криптография", callback_data="domain:cryptography")],
         [InlineKeyboardButton("📊 Алгоритмы и структуры данных", callback_data="domain:algorithms")],
         [InlineKeyboardButton("🌐 Компьютерные сети", callback_data="domain:networks")],
     ]
@@ -146,6 +146,14 @@ async def questions_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [
             InlineKeyboardButton("5 билетов", callback_data="tickets:5"),
             InlineKeyboardButton("10 билетов", callback_data="tickets:10"),
+        ],
+        [
+            InlineKeyboardButton("15 билетов", callback_data="tickets:15"),
+            InlineKeyboardButton("20 билетов", callback_data="tickets:20"),
+        ],
+        [
+            InlineKeyboardButton("25 билетов", callback_data="tickets:25"),
+            InlineKeyboardButton("30 билетов", callback_data="tickets:30"),
         ],
     ]
     await query.edit_message_text(
@@ -258,7 +266,7 @@ async def restart_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Выберите предметную область ⬇️"
     )
     keyboard = [
-        [InlineKeyboardButton("🔐 Криптография", callback_data="domain:crypto")],
+        [InlineKeyboardButton("🔐 Криптография", callback_data="domain:cryptography")],
         [InlineKeyboardButton("📊 Алгоритмы и структуры данных", callback_data="domain:algorithms")],
         [InlineKeyboardButton("🌐 Компьютерные сети", callback_data="domain:networks")],
     ]

@@ -14,7 +14,7 @@ TELEGRAM_BOT_TOKEN = "HERE_YOUR_TG_TOKEN"
 
 # Домены
 DOMAINS = {
-    "crypto": "Криптография",
+    "cryptography": "Криптография",
     "algorithms": "Алгоритмы и структуры данных",
     "networks": "Компьютерные сети",
 }
